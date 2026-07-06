@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Reporte de Progreso</title>
+    <style>
+        body { font-family: 'Helvetica', sans-serif; color: #333; line-height: 1.6; }
+        .container { width: 90%; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .info-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #3498db; color: white; padding: 10px; text-align: left; }
+        td { border-bottom: 1px solid #ddd; padding: 10px; }
+        .footer { margin-top: 50px; font-size: 0.8em; color: #7f8c8d; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>LearnTrack - Reporte Académico</h1>
+
+    <div class="info-box">
+        <p><strong>Grupo:</strong> <span th:text="${groupName}">Nombre del Grupo</span></p>
+        <p><strong>Colección:</strong> <span th:text="${collectionName}">Nombre Colección</span></p>
+        <p><strong>Fecha:</strong> <span th:text="${date}">01/01/2026</span></p>
+    </div>
+
+    <h3>Resumen de Progreso</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>Indicador</th>
+            <th>Estado</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Avance Global</td>
+            <td th:text="${globalProgress != null ? globalProgress : 'Completado'}">Completado</td>
+        </tr>
+        <tr>
+            <td>Número de estudiantes</td>
+            <td th:text="${studentCount != null ? studentCount : 'N/A'}">N/A</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Generado automáticamente por LearnTrack System - 2026</p>
+    </div>
+</div>
+</body>
+</html>

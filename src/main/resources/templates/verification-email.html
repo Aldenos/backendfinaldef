@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Verificación de cuenta</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; }
+        h1 { color: #372F4C; }
+        .code { font-size: 28px; font-weight: bold; color: #7C5CBF; background: #f0edf8; padding: 10px 20px; display: inline-block; border-radius: 6px; letter-spacing: 4px; }
+        .btn { display: inline-block; padding: 10px 20px; background: #7C5CBF; color: #fff; text-decoration: none; border-radius: 4px; }
+        .footer { margin-top: 30px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>¡Hola!</h1>
+    <p>Has sido aprobado por el administrador. Para activar tu cuenta, ingresa el siguiente código de verificación:</p>
+    <p class="code" th:text="${code}">123456</p>
+    <p>O haz clic en el siguiente enlace:</p>
+    <a th:href="'https://tu-frontend.com/verify-code?email=' + ${email}" class="btn">Verificar cuenta</a>
+    <p class="footer">Este código expira en 24 horas. Si no solicitaste esto, ignora este mensaje.</p>
+</div>
+</body>
+</html>
