@@ -57,6 +57,7 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
             if (types.contains("QUIZ")) {
                 LearningActivityDto quiz = objectMapper.treeToValue(root.get("quiz"), LearningActivityDto.class);
                 validateQuiz(quiz);
+                quiz.setType("QUIZ");
                 quiz.setGeneratedByAi(true);
                 quiz.setStatus("DRAFT");
                 LearningActivityDto savedQuiz = learningActivityService.save(topic.getId(), quiz, userEmail);
