@@ -7,7 +7,6 @@ import com.upc.learntrack.course.repository.TeacherRepository;
 import com.upc.learntrack.iam.dto.LoginRequestDto;
 import com.upc.learntrack.iam.dto.RegisterRequestDto;
 import com.upc.learntrack.iam.exception.RoleNotFoundException;
-import com.upc.learntrack.iam.exception.UserNotFoundException;
 import com.upc.learntrack.iam.model.Role;
 import com.upc.learntrack.iam.model.User;
 import com.upc.learntrack.iam.model.UserStatus;
@@ -17,6 +16,7 @@ import com.upc.learntrack.iam.service.AuthService;
 import com.upc.learntrack.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -81,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new BadCredentialsException("Correo o contraseña incorrectos. Intente nuevamente."));
 
         if (user.getStatus() == UserStatus.PENDING) {
             throw new IllegalStateException("Tu cuenta está pendiente de verificación. Revisa tu correo.");

@@ -40,7 +40,7 @@ services:
 
       # CORS - URL del frontend en Netlify
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://learntrack-frontweb.netlify.app"
+        value: "https://learntrackfront.netlify.app"
 
       # Configuración de Spring JPA
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO

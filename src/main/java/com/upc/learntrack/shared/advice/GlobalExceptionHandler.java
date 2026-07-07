@@ -3,12 +3,14 @@ package com.upc.learntrack.shared.advice;
 import com.upc.learntrack.activity.exception.ResourceNotFoundException;
 import com.upc.learntrack.learningpath.exception.InsufficientDataException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
@@ -45,6 +47,11 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos. Intente nuevamente.", request);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex, WebRequest request) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -61,6 +68,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, WebRequest request) {
+        // Respeta el @ResponseStatus declarado en las excepciones de dominio
+        // (p. ej. XxxNotFoundException -> 404) en lugar de devolver siempre 500.
+        ResponseStatus responseStatus =
+                AnnotatedElementUtils.findMergedAnnotation(ex.getClass(), ResponseStatus.class);
+        if (responseStatus != null) {
+            HttpStatus status = responseStatus.value();
+            String message = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                    ? ex.getMessage()
+                    : responseStatus.reason();
+            return buildErrorResponse(status, message, request);
+        }
         log.error("Unexpected error", ex);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", request);
     }
