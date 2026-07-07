@@ -43,10 +43,31 @@ public class LearningPathServiceImpl implements LearningPathService {
     private final LearningPathMapper mapper;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<LearningPathDto> findAllByStudentEmail(String studentEmail) {
         Student student = studentRepository.findByUserEmail(studentEmail)
                 .orElseThrow(() -> new StudentNotFoundException("Estudiante no encontrado con email: " + studentEmail));
+
+        // Una ruta de aprendizaje solo existía si el estudiante había visitado antes una
+        // colección puntual en The Codex (getAdaptivePath). Un estudiante recién llegado a
+        // "Mis Rutas" nunca disparaba esa creación, así que la pantalla se veía vacía aunque
+        // ya hubiera resuelto actividades. Aquí se crea/actualiza la ruta de cualquier
+        // colección donde ya tenga al menos un resultado, para que "Mis Rutas" sea real.
+        List<ActivityResult> allResults = activityResultRepository.findAllByStudentId(student.getId());
+        Set<LearningCollection> collectionsWithActivity = allResults.stream()
+                .map(r -> r.getActivity().getTopic().getLearningCollection())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        for (LearningCollection collection : collectionsWithActivity) {
+            LearningPath path = learningPathRepository
+                    .findByStudentIdAndLearningCollectionId(student.getId(), collection.getId())
+                    .orElseGet(() -> createNewLearningPath(student, collection));
+            Map<Topic, BigDecimal> masteryByTopic = calculateMasteryByTopic(student, collection);
+            reorderPathNodesByMastery(path, masteryByTopic);
+            updateCurrentPercentage(path);
+            learningPathRepository.save(path);
+        }
+
         return learningPathRepository.findAllByStudentId(student.getId()).stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toList());

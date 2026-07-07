@@ -14,12 +14,17 @@ import com.upc.learntrack.assessment.model.StudentAnswer;
 import com.upc.learntrack.assessment.repository.ActivityResultRepository;
 import com.upc.learntrack.assessment.service.ActivityResultService;
 import com.upc.learntrack.course.exception.StudentNotFoundException;
+import com.upc.learntrack.course.model.LearningCollection;
 import com.upc.learntrack.course.model.Student;
+import com.upc.learntrack.course.model.Topic;
 import com.upc.learntrack.course.repository.EnrollmentRepository;
 import com.upc.learntrack.course.repository.StudentRepository;
+import com.upc.learntrack.course.repository.TopicRepository;
 import com.upc.learntrack.iam.model.User;
 import com.upc.learntrack.iam.repository.UserRepository;
 import com.upc.learntrack.learningpath.model.ConceptualGap;
+import com.upc.learntrack.learningpath.model.LearningPath;
+import com.upc.learntrack.learningpath.model.PathNode;
 import com.upc.learntrack.learningpath.repository.ConceptualGapRepository;
 import com.upc.learntrack.learningpath.repository.LearningPathRepository;
 import com.upc.learntrack.learningpath.repository.PathNodeRepository;
@@ -50,6 +55,7 @@ public class ActivityResultServiceImpl implements ActivityResultService {
     private final LearningPathRepository learningPathRepository;
     private final ConceptualGapRepository conceptualGapRepository;
     private final PathNodeRepository pathNodeRepository;
+    private final TopicRepository topicRepository;
     private final ActivityResultMapper mapper;
     private final UserRepository userRepository;
 
@@ -158,23 +164,22 @@ public class ActivityResultServiceImpl implements ActivityResultService {
         double finalScore = totalQuestionsCount == 0 ? 0.0 : ((double) correctCount / totalQuestionsCount) * 100.0;
         result.setScore(BigDecimal.valueOf(finalScore));
 
-        Long collectionId = activity.getTopic().getLearningCollection().getId();
+        LearningCollection collection = activity.getTopic().getLearningCollection();
+        LearningPath path = learningPathRepository
+                .findByStudentIdAndLearningCollectionId(student.getId(), collection.getId())
+                .orElseGet(() -> createLearningPath(student, collection));
 
         if (finalScore < 70.0) {
-            learningPathRepository.findByStudentIdAndLearningCollectionId(student.getId(), collectionId)
-                    .ifPresent(path -> {
-                        ConceptualGap gap = new ConceptualGap();
-                        gap.setLearningPath(path);
-                        gap.setTopic(activity.getTopic());
-                        gap.setDescription("El estudiante obtuvo " + finalScore + "% en la actividad '" + activity.getTitle() + "'. Requiere refuerzo.");
-                        gap.setResolved(false);
-                        conceptualGapRepository.save(gap);
-                    });
+            ConceptualGap gap = new ConceptualGap();
+            gap.setLearningPath(path);
+            gap.setTopic(activity.getTopic());
+            gap.setDescription("El estudiante obtuvo " + finalScore + "% en la actividad '" + activity.getTitle() + "'. Requiere refuerzo.");
+            gap.setResolved(false);
+            conceptualGapRepository.save(gap);
         } else {
-            learningPathRepository.findByStudentIdAndLearningCollectionId(student.getId(), collectionId)
-                    .flatMap(path -> pathNodeRepository.findAllByLearningPathIdOrderByOrderIdxAsc(path.getId()).stream()
-                            .filter(node -> node.getTopic().getId().equals(activity.getTopic().getId()))
-                            .findFirst())
+            pathNodeRepository.findAllByLearningPathIdOrderByOrderIdxAsc(path.getId()).stream()
+                    .filter(node -> node.getTopic().getId().equals(activity.getTopic().getId()))
+                    .findFirst()
                     .ifPresentOrElse(node -> {
                         node.setCompleted(true);
                         node.setMasteryScore(BigDecimal.valueOf(finalScore));
@@ -300,5 +305,34 @@ public class ActivityResultServiceImpl implements ActivityResultService {
     private boolean isTeacher(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
         return user != null && "DOCENTE".equals(user.getRole().getName());
+    }
+
+    // La ruta de aprendizaje antes solo se creaba si el estudiante había visitado una colección
+    // puntual en The Codex. Se crea aquí también para que quede disponible de inmediato tras
+    // resolver la primera actividad, sin depender de que visite otra pantalla primero.
+    private LearningPath createLearningPath(Student student, LearningCollection collection) {
+        LearningPath newPath = new LearningPath();
+        newPath.setStudent(student);
+        newPath.setLearningCollection(collection);
+        newPath.setTargetPercentage(new BigDecimal("70.00"));
+        newPath.setStatus("IN_PROGRESS");
+        newPath.setCurrentPercentage(BigDecimal.ZERO);
+
+        List<Topic> topics = topicRepository.findAllByLearningCollectionIdOrderByOrderIdxAsc(collection.getId());
+        if (topics != null && !topics.isEmpty()) {
+            List<PathNode> nodes = new ArrayList<>();
+            for (int i = 0; i < topics.size(); i++) {
+                Topic topic = topics.get(i);
+                PathNode node = new PathNode();
+                node.setLearningPath(newPath);
+                node.setTopic(topic);
+                node.setOrderIdx(i);
+                node.setCompleted(false);
+                node.setMasteryScore(BigDecimal.ZERO);
+                nodes.add(node);
+            }
+            newPath.setPathNodes(nodes);
+        }
+        return learningPathRepository.save(newPath);
     }
 }
