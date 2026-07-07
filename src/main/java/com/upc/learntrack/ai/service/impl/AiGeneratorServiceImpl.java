@@ -37,13 +37,13 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
 
     @Override
     @Transactional
-    public GenerateActivityResponseDto generateActivity(String topicName, String content, String userEmail, List<String> types) {
+    public GenerateActivityResponseDto generateActivity(Long topicId, String content, String userEmail, List<String> types) {
         try {
-            Topic topic = topicRepository.findByName(topicName)
-                    .orElseThrow(() -> new TopicNotFoundException("Tema no encontrado: " + topicName));
+            Topic topic = topicRepository.findById(topicId)
+                    .orElseThrow(() -> new TopicNotFoundException("Tema no encontrado con ID: " + topicId));
 
             // 1. Construir el prompt
-            String prompt = promptBuilder.buildMultiFormatPrompt(topicName, content, types);
+            String prompt = promptBuilder.buildMultiFormatPrompt(topic.getName(), content, types);
             log.info("Prompt enviado a IA: {}", prompt);
 
             // 2. Llamar a Groq via Spring AI

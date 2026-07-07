@@ -28,7 +28,7 @@ public class AiController {
     @PreAuthorize("hasAnyAuthority('DOCENTE', 'ESTUDIANTE')")
     public ResponseEntity<GenerateActivityResponseDto> uploadAndGenerate(
             @RequestParam("file") @NotNull MultipartFile file,
-            @RequestParam("topicName") @NotEmpty String topicName,
+            @RequestParam("topicId") @NotNull Long topicId,
             @RequestParam("types") @NotEmpty List<String> types,
             Principal principal) throws IOException {
 
@@ -43,7 +43,7 @@ public class AiController {
         }
 
         String content = pdfTextExtractor.extractText(file);
-        GenerateActivityResponseDto result = aiService.generateActivity(topicName, content, principal.getName(), types);
+        GenerateActivityResponseDto result = aiService.generateActivity(topicId, content, principal.getName(), types);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 }
