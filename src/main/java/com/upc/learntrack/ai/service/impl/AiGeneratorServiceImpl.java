@@ -56,6 +56,7 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
 
             if (types.contains("QUIZ")) {
                 LearningActivityDto quiz = objectMapper.treeToValue(root.get("quiz"), LearningActivityDto.class);
+                validateQuiz(quiz);
                 quiz.setGeneratedByAi(true);
                 quiz.setStatus("DRAFT");
                 LearningActivityDto savedQuiz = learningActivityService.save(topic.getId(), quiz, userEmail);
@@ -90,6 +91,29 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
         } catch (Exception e) {
             log.error("Error al generar actividad con IA", e);
             throw new AiGenerationException("Error al generar la actividad con IA: " + e.getMessage(), e);
+        }
+    }
+
+    private void validateQuiz(LearningActivityDto quiz) {
+        if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
+            throw new AiGenerationException("La IA no generó ninguna pregunta válida. Intenta de nuevo o con otro PDF.");
+        }
+        for (var question : quiz.getQuestions()) {
+            if (question.getStatement() == null || question.getStatement().isBlank()) {
+                throw new AiGenerationException("La IA devolvió una pregunta sin enunciado. Intenta de nuevo.");
+            }
+            if (question.getOptions() == null || question.getOptions().size() < 2) {
+                throw new AiGenerationException("La IA devolvió una pregunta con menos de 2 opciones. Intenta de nuevo.");
+            }
+            boolean hasBlankOption = question.getOptions().stream()
+                    .anyMatch(o -> o.getText() == null || o.getText().isBlank() || o.getCorrect() == null);
+            if (hasBlankOption) {
+                throw new AiGenerationException("La IA devolvió una opción incompleta. Intenta de nuevo.");
+            }
+            boolean hasCorrectOption = question.getOptions().stream().anyMatch(o -> Boolean.TRUE.equals(o.getCorrect()));
+            if (!hasCorrectOption) {
+                throw new AiGenerationException("La IA no marcó ninguna opción correcta en una pregunta. Intenta de nuevo.");
+            }
         }
     }
 
