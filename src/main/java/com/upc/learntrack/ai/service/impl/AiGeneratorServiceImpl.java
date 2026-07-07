@@ -8,7 +8,9 @@ import com.upc.learntrack.activity.dto.FlashcardSetDto;
 import com.upc.learntrack.activity.dto.LearningActivityDto;
 import com.upc.learntrack.activity.service.FlashcardService;
 import com.upc.learntrack.activity.service.LearningActivityService;
+import com.upc.learntrack.ai.dto.FeynmanCheckResponseDto;
 import com.upc.learntrack.ai.dto.GenerateActivityResponseDto;
+import com.upc.learntrack.ai.dto.KeyPointCheckDto;
 import com.upc.learntrack.ai.exception.AiGenerationException;
 import com.upc.learntrack.ai.service.AiGeneratorService;
 import com.upc.learntrack.ai.service.PromptBuilderService;
@@ -21,6 +23,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -95,6 +98,86 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
             log.error("Error al generar actividad con IA", e);
             throw new AiGenerationException("Error al generar la actividad con IA: " + e.getMessage(), e);
         }
+    }
+
+    private static final List<String> FEYNMAN_KEY_POINTS = List.of(
+            "¿Qué problema resuelve este concepto?",
+            "¿Cómo lo explicarías con una analogía simple?",
+            "¿Cuáles son los pasos o partes principales?",
+            "¿Cuándo se usaría en la práctica?"
+    );
+
+    @Override
+    public FeynmanCheckResponseDto checkFeynmanExplanation(Long topicId, String explanation) {
+        try {
+            Topic topic = topicRepository.findById(topicId)
+                    .orElseThrow(() -> new TopicNotFoundException("Tema no encontrado con ID: " + topicId));
+
+            String prompt = buildFeynmanPrompt(topic.getName(), explanation);
+            log.info("Prompt Feynman enviado a IA: {}", prompt);
+
+            String response = chatModel.call(prompt);
+            log.info("Respuesta Feynman recibida de IA: {}", response);
+
+            JsonNode root = objectMapper.readTree(stripCodeFences(response));
+
+            List<KeyPointCheckDto> checks = new ArrayList<>();
+            JsonNode checksNode = root.get("checks");
+            if (checksNode != null && checksNode.isArray()) {
+                for (JsonNode c : checksNode) {
+                    KeyPointCheckDto dto = new KeyPointCheckDto();
+                    dto.setLabel(c.path("label").asText(""));
+                    dto.setFound(c.path("found").asBoolean(false));
+                    checks.add(dto);
+                }
+            }
+            if (checks.isEmpty()) {
+                for (String label : FEYNMAN_KEY_POINTS) {
+                    KeyPointCheckDto dto = new KeyPointCheckDto();
+                    dto.setLabel(label);
+                    dto.setFound(false);
+                    checks.add(dto);
+                }
+            }
+
+            FeynmanCheckResponseDto result = new FeynmanCheckResponseDto();
+            result.setChecks(checks);
+            result.setFeedback(root.path("feedback").asText("La IA no devolvió retroalimentación."));
+            result.setPassed(checks.stream().filter(KeyPointCheckDto::isFound).count() >= 3);
+            return result;
+
+        } catch (Exception e) {
+            log.error("Error al evaluar la explicación Feynman con IA", e);
+            throw new AiGenerationException("Error al evaluar la explicación con IA: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildFeynmanPrompt(String topicName, String explanation) {
+        return """
+                Actúa como un profesor evaluando la explicación de un estudiante sobre el tema "%s",
+                usando la técnica Feynman (explicar con tus propias palabras como si le enseñara a un principiante).
+
+                Explicación del estudiante:
+                "%s"
+
+                Evalúa si la explicación aborda estos 4 puntos clave (aunque sea brevemente). Si la explicación
+                es vacía, sin sentido o no relacionada al tema, márcalos todos como no cumplidos:
+                1. "¿Qué problema resuelve este concepto?"
+                2. "¿Cómo lo explicarías con una analogía simple?"
+                3. "¿Cuáles son los pasos o partes principales?"
+                4. "¿Cuándo se usaría en la práctica?"
+
+                Responde ÚNICAMENTE con este JSON, sin texto adicional ni bloques de código markdown:
+                {
+                  "checks": [
+                    { "label": "¿Qué problema resuelve este concepto?", "found": true },
+                    { "label": "¿Cómo lo explicarías con una analogía simple?", "found": false },
+                    { "label": "¿Cuáles son los pasos o partes principales?", "found": false },
+                    { "label": "¿Cuándo se usaría en la práctica?", "found": false }
+                  ],
+                  "feedback": "1-2 oraciones en español, honestas y constructivas, sobre qué le falta o qué hizo bien."
+                }
+                """.formatted(topicName, explanation.replace("\"", "'"));
     }
 
     private void validateQuiz(LearningActivityDto quiz) {

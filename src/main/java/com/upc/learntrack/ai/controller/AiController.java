@@ -1,8 +1,11 @@
 package com.upc.learntrack.ai.controller;
 
+import com.upc.learntrack.ai.dto.FeynmanCheckRequestDto;
+import com.upc.learntrack.ai.dto.FeynmanCheckResponseDto;
 import com.upc.learntrack.ai.dto.GenerateActivityResponseDto;
 import com.upc.learntrack.ai.service.AiGeneratorService;
 import com.upc.learntrack.shared.service.PdfTextExtractorService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +48,13 @@ public class AiController {
         String content = pdfTextExtractor.extractText(file);
         GenerateActivityResponseDto result = aiService.generateActivity(topicId, content, principal.getName(), types);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
+    @PostMapping("/feynman-check")
+    @PreAuthorize("hasAuthority('ESTUDIANTE')")
+    public ResponseEntity<FeynmanCheckResponseDto> checkFeynmanExplanation(
+            @Valid @RequestBody FeynmanCheckRequestDto request) {
+        FeynmanCheckResponseDto result = aiService.checkFeynmanExplanation(request.getTopicId(), request.getExplanation());
+        return ResponseEntity.ok(result);
     }
 }
