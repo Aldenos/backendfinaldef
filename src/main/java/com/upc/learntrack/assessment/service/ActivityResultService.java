@@ -9,7 +9,7 @@ public interface ActivityResultService {
    List<ActivityResultDto> findAll();
    ActivityResultDto findById(Long id);
    List<ActivityResultDto> findAllMyResults(String studentEmail, String type, Long topicId, String sort);
-   ActivityResultDetailedResponseDto submit(String topicName, String activityTitle, ActivityResultSubmitDto dto, String studentEmail);
+   ActivityResultDetailedResponseDto submit(Long activityId, ActivityResultSubmitDto dto, String studentEmail);
    ActivityResultDetailDto findResultDetail(Long resultId, String userEmail);
    List<TimelinePointDto> getTimeline(String studentEmail, Long topicId, LocalDate startDate, LocalDate endDate);
 }

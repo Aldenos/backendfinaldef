@@ -30,15 +30,14 @@ public class ActivityResultController {
       return ResponseEntity.ok(service.findAllMyResults(principal.getName(), type, topicId, sort));
    }
 
-   @PostMapping("/topics/{topicName}/activities/{activityTitle}/submit")
+   @PostMapping("/activities/{activityId}/submit")
    @PreAuthorize("hasAuthority('ESTUDIANTE')")
    public ResponseEntity<ActivityResultDetailedResponseDto> submit(
-           @PathVariable String topicName,
-           @PathVariable String activityTitle,
+           @PathVariable Long activityId,
            @Valid @RequestBody ActivityResultSubmitDto dto,
            Principal principal) {
       return ResponseEntity.status(HttpStatus.CREATED)
-              .body(service.submit(topicName, activityTitle, dto, principal.getName()));
+              .body(service.submit(activityId, dto, principal.getName()));
    }
 
    @GetMapping("/results/{resultId}")

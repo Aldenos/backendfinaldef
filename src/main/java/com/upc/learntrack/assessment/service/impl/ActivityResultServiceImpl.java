@@ -103,13 +103,13 @@ public class ActivityResultServiceImpl implements ActivityResultService {
 
     @Override
     @Transactional
-    public ActivityResultDetailedResponseDto submit(String topicName, String activityTitle, ActivityResultSubmitDto dto, String studentEmail) {
+    public ActivityResultDetailedResponseDto submit(Long activityId, ActivityResultSubmitDto dto, String studentEmail) {
         try {
         Student student = studentRepository.findByUserEmail(studentEmail)
                 .orElseThrow(() -> new StudentNotFoundException("Estudiante no encontrado con email: " + studentEmail));
 
-        LearningActivity activity = activityRepository.findByTitleAndTopicNameIgnoreCase(activityTitle, topicName)
-                .orElseThrow(() -> new IllegalArgumentException("Actividad no encontrada para el tema '" + topicName + "' y título '" + activityTitle + "'"));
+        LearningActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Actividad no encontrada con ID: " + activityId));
 
         // NUEVA VALIDACIÓN: todas las preguntas deben ser respondidas (US14, escenario 3)
         int totalQuestions = activity.getQuestions().size();
