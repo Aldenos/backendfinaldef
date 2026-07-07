@@ -64,6 +64,6 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: SPRING_AI_OPENAI_BASE_URL
-        value: "https://api.groq.com/openai/v1"
+        value: "https://api.groq.com/openai"
       - key: SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL
         value: "llama-3.3-70b-versatile"
