@@ -58,6 +58,8 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
                 LearningActivityDto quiz = objectMapper.treeToValue(root.get("quiz"), LearningActivityDto.class);
                 validateQuiz(quiz);
                 quiz.setType("QUIZ");
+                quiz.setTitle(truncate(quiz.getTitle(), 255));
+                quiz.setDescription(truncate(quiz.getDescription(), 255));
                 quiz.setGeneratedByAi(true);
                 quiz.setStatus("DRAFT");
                 LearningActivityDto savedQuiz = learningActivityService.save(topic.getId(), quiz, userEmail);
@@ -116,6 +118,11 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
                 throw new AiGenerationException("La IA no marcó ninguna opción correcta en una pregunta. Intenta de nuevo.");
             }
         }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) return null;
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 
     private String stripCodeFences(String response) {
