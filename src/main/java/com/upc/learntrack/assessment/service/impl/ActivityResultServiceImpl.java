@@ -7,6 +7,7 @@ import com.upc.learntrack.activity.repository.ActivityRepository;
 import com.upc.learntrack.activity.repository.AssignmentRepository;
 import com.upc.learntrack.assessment.dto.*;
 import com.upc.learntrack.assessment.exception.ActivityResultNotFoundException;
+import com.upc.learntrack.assessment.exception.ActivityResultSubmissionException;
 import com.upc.learntrack.assessment.mapper.ActivityResultMapper;
 import com.upc.learntrack.assessment.model.ActivityResult;
 import com.upc.learntrack.assessment.model.StudentAnswer;
@@ -97,6 +98,7 @@ public class ActivityResultServiceImpl implements ActivityResultService {
     @Override
     @Transactional
     public ActivityResultDetailedResponseDto submit(String topicName, String activityTitle, ActivityResultSubmitDto dto, String studentEmail) {
+        try {
         Student student = studentRepository.findByUserEmail(studentEmail)
                 .orElseThrow(() -> new StudentNotFoundException("Estudiante no encontrado con email: " + studentEmail));
 
@@ -208,6 +210,13 @@ public class ActivityResultServiceImpl implements ActivityResultService {
         response.setAnswers(answerDetails);
 
         return response;
+        } catch (IllegalArgumentException | AccessDeniedException | StudentNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al enviar el resultado del quiz", e);
+            throw new ActivityResultSubmissionException(
+                    "Error al enviar el resultado: " + e.getClass().getSimpleName() + " - " + e.getMessage(), e);
+        }
     }
 
     @Override
