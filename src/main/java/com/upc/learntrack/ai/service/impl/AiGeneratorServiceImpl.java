@@ -50,8 +50,8 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
             String response = chatModel.call(prompt);
             log.info("Respuesta recibida de IA: {}", response);
 
-            // 3. Parsear el JSON que devolvió la IA
-            JsonNode root = objectMapper.readTree(response);
+            // 3. Parsear el JSON que devolvió la IA (algunos modelos envuelven la respuesta en ```json ... ``` a pesar de pedirle solo JSON)
+            JsonNode root = objectMapper.readTree(stripCodeFences(response));
             GenerateActivityResponseDto result = new GenerateActivityResponseDto();
 
             if (types.contains("QUIZ")) {
@@ -91,5 +91,20 @@ public class AiGeneratorServiceImpl implements AiGeneratorService {
             log.error("Error al generar actividad con IA", e);
             throw new AiGenerationException("Error al generar la actividad con IA: " + e.getMessage(), e);
         }
+    }
+
+    private String stripCodeFences(String response) {
+        String trimmed = response.trim();
+        if (trimmed.startsWith("```")) {
+            trimmed = trimmed.substring(3);
+            if (trimmed.startsWith("json")) {
+                trimmed = trimmed.substring(4);
+            }
+            int closingFence = trimmed.lastIndexOf("```");
+            if (closingFence >= 0) {
+                trimmed = trimmed.substring(0, closingFence);
+            }
+        }
+        return trimmed.trim();
     }
 }
