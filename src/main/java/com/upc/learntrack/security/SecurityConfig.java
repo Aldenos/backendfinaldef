@@ -48,10 +48,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints públicos
                         .requestMatchers(
+                                "/",                           // Raíz -> redirige a Swagger UI
                                 "/api/v1/auth/**",
                                 "/api/v1/admin/verify-code",   // Verificación de código (público)
                                 "/error",
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
                         // Endpoints de administración (solo rol ADMIN)
