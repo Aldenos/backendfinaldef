@@ -306,3 +306,58 @@ SELECT setval(pg_get_serial_sequence('student_flashcard_progress', 'id'), COALES
 SELECT setval(pg_get_serial_sequence('pdf_reports', 'id'), COALESCE(MAX(id), 1)) FROM pdf_reports;
 SELECT setval(pg_get_serial_sequence('statistics_snapshots', 'id'), COALESCE(MAX(id), 1)) FROM statistics_snapshots;
 SELECT setval(pg_get_serial_sequence('group_join_codes', 'id'), COALESCE(MAX(id), 1)) FROM group_join_codes;
+
+
+-- =================================================================================
+-- 27. USUARIOS POR DEFECTO (uno por cada rol) — credenciales de acceso
+-- Se insertan con UPSERT por email para que funcionen también en BD ya creadas.
+-- Van DESPUÉS de la resincronización de secuencias para no colisionar IDs.
+--   admin@learntrack.com      / admin123      (ADMIN)
+--   docente@learntrack.com    / docente123    (DOCENTE)
+--   estudiante@learntrack.com / 123456         (ESTUDIANTE)
+-- =================================================================================
+
+-- Asegurar el rol ADMIN (data.sql base solo crea DOCENTE y ESTUDIANTE)
+INSERT INTO roles (name) VALUES ('ADMIN') ON CONFLICT (name) DO NOTHING;
+
+-- Admin
+INSERT INTO users (email, password, role_id, verified, status, created_at)
+VALUES ('admin@learntrack.com',
+        '$2a$10$Jwgr/Xf0e/4NSIMC4MrqI.kNSViOuElXeF/YNNksWf3cP3gh1jl1G',
+        (SELECT id FROM roles WHERE name = 'ADMIN'), true, 'ACTIVE', CURRENT_TIMESTAMP)
+ON CONFLICT (email) DO UPDATE
+    SET password = EXCLUDED.password,
+        role_id  = EXCLUDED.role_id,
+        verified = true,
+        status   = 'ACTIVE';
+
+-- Docente
+INSERT INTO users (email, password, role_id, verified, status, created_at)
+VALUES ('docente@learntrack.com',
+        '$2a$10$69hpI8P6ezloZ7NeBtSWvOklIeL3XEQ/PovY8SFI/E2KT3dfYRdTC',
+        (SELECT id FROM roles WHERE name = 'DOCENTE'), true, 'ACTIVE', CURRENT_TIMESTAMP)
+ON CONFLICT (email) DO UPDATE
+    SET password = EXCLUDED.password,
+        role_id  = EXCLUDED.role_id,
+        verified = true,
+        status   = 'ACTIVE';
+
+-- Estudiante
+INSERT INTO users (email, password, role_id, verified, status, created_at)
+VALUES ('estudiante@learntrack.com',
+        '$2a$10$bLeD4W2dIyq42xpj0s.zs.QmTuYyAhJ6ZM93WssYqrNeGHfXktM7q',
+        (SELECT id FROM roles WHERE name = 'ESTUDIANTE'), true, 'ACTIVE', CURRENT_TIMESTAMP)
+ON CONFLICT (email) DO UPDATE
+    SET password = EXCLUDED.password,
+        role_id  = EXCLUDED.role_id,
+        verified = true,
+        status   = 'ACTIVE';
+
+-- Perfiles asociados (docente y estudiante)
+INSERT INTO teachers (first_name, last_name, user_id)
+SELECT 'Docente', 'Demo', id FROM users WHERE email = 'docente@learntrack.com'
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO students (first_name, last_name, user_id)
+SELECT 'Estudiante', 'Demo', id FROM users WHERE email = 'estudiante@learntrack.com'
+ON CONFLICT (user_id) DO NOTHING;
