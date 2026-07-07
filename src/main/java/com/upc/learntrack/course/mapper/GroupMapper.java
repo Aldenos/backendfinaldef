@@ -11,6 +11,7 @@ public interface GroupMapper {
 
    @Mapping(source = "learningCollection.id", target = "collectionId")
    @Mapping(source = "learningCollection.name", target = "collectionName")
+   @Mapping(target = "studentsCount", expression = "java(group.getEnrollments() == null ? 0 : group.getEnrollments().size())")
    GroupDto toDto(Group group);
 
    @Mapping(target = "id", ignore = true)

@@ -20,5 +20,7 @@ public class GroupDto {
    private Long collectionId;
    private String collectionName;
 
+   private Integer studentsCount;
+
    private LocalDateTime createdAt;
 }
